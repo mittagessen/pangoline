@@ -41,3 +41,7 @@ Various options to direct rendering such as page size, margins, language, and
 base direction can be manually set, for example:
 
     ~> pangoline render -p 216 279 -l en-us -f "Noto Sans 24" doc.txt
+
+For larger collections of texts it is advisable to parallelize processing:
+
+    ~> pangoline --workers 8 render *.txt
