@@ -17,12 +17,27 @@ You'll need PyGObject and the Pango/Cairo libraries on your system. As
 PyGObject is only shipped in source form this also requires a C compiler and
 the usual build environment dependencies installed. An easier way is to use conda:
 
-    ~> conda install -c conda-forge pygobject pango Cairo click jinja2 rich
+    ~> conda install -c conda-forge pygobject pango Cairo click jinja2 rich pypdfium2 lxml
     ~> pip install --no-deps .
 
 ## Usage
 
+PangoLine renders text first into vector PDFs and ALTO facsimiles using some
+configurable "physical" dimensions.
+
     ~> pangoline render doc.txt
+    Rendering ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:00
+
+In a second step those vector files can be rasterized into PNGs and the
+coordinates in the ALTO files scaled to the selected resolution (per default
+300dpi):
+
+    ~> pangoline rasterize doc.0.xml doc.1.xml ...
+    Rasterizing ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:00
+
+Rasterized files and their ALTOs can be used as is as ATR training data.
 
 Various options to direct rendering such as page size, margins, language, and
-base direction can be manually set.
+base direction can be manually set, for example:
+
+    ~> pangoline render -p 216 279 -l en-us -f "Noto Sans 24" doc.txt

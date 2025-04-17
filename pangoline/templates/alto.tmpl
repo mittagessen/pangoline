@@ -11,7 +11,7 @@
     <Layout>
         <Page WIDTH="{{ page_width }}" HEIGHT="{{ page_height }}" PHYSICAL_IMG_NR="0" ID="page_0" LANG="{{ language }}">
             <PrintSpace HPOS="0" VPOS="0" WIDTH="{{ page_width }}" HEIGHT="{{ page_height }}">
-              <TextBlock ID="{{ text_block_id }}{% if base_dir %} BASE_DIRECTION="{{ base_dir }}"{% endif %}>
+              <TextBlock ID="{{ text_block_id }}"{% if base_dir %} BASE_DIRECTION="{{ base_dir }}"{% endif %}>
                 {% for line in lines -%}
                 <TextLine ID="{{ line.id }}" HPOS="{{ line.top }}" VPOS="{{ line.left }}" WIDTH="{{ line.right - line.left }}" HEIGHT="{{ line.bottom - line.top }}" BASELINE="{{ line.left}},{{ line.baseline }} {{ line.right }},{{ line.baseline }}">
                   <Shape>

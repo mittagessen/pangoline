@@ -1,3 +1,21 @@
+#
+# Copyright 2025 Benjamin Kiessling
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+# or implied. See the License for the specific language governing
+# permissions and limitations under the License.
+"""
+pangoline.render
+~~~~~~~~~~~~~~~~
+"""
 import gi
 import uuid
 import cairo
@@ -109,7 +127,7 @@ def render_text(text: str,
                 left = Pango.units_to_double(extents.x) + left_margin
                 right = left + Pango.units_to_double(extents.width)
                 line_splits.append({'id': str(uuid.uuid4()),
-                                    'text': line_text,
+                                    'text': line_text.strip(),
                                     'baseline': int(bl / _mm_point),
                                     'top': int(top / _mm_point),
                                     'bottom': int(bottom / _mm_point),
@@ -121,7 +139,7 @@ def render_text(text: str,
         alto_output_path = output_base_path.with_suffix(f'.{page_idx}.xml')
         # write ALTO XML file
         with open(alto_output_path, 'w') as fo:
-            fo.write(tmpl.render(pdf_path=pdf_output_path,
+            fo.write(tmpl.render(pdf_path=pdf_output_path.name,
                                  language=pango_lang.to_string(),
                                  base_dir={'L': 'ltr', 'R': 'rtl', None: None}[base_dir],
                                  text_block_id=str(uuid.uuid4()),

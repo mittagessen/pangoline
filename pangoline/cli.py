@@ -24,6 +24,8 @@ import click
 
 from pathlib import Path
 from rich.progress import Progress
+from multiprocessing import Pool
+from functools import partial
 
 from typing import Tuple, Literal, Optional
 
@@ -33,18 +35,31 @@ logger = logging.getLogger('pangoline')
 
 @click.group(chain=False)
 @click.version_option()
-@click.option('-v', '--verbose', default=0, count=True, show_default=True)
-def cli(verbose):
+@click.option('--workers', show_default=True, default=1, type=click.IntRange(1), help='Number of worker processes.')
+def cli(workers):
     """
-    Base command for repository interaction.
+    Base command for the text renderer
     """
     ctx = click.get_current_context()
-    ctx.meta['verbose'] = verbose
+    ctx.meta['workers'] = workers
 
-    logger.setLevel(level=30 - min(10 * verbose, 20))
+
+def _render_doc(doc, output_dir, paper_size, margins, font, language,
+                base_dir):
+    from pangoline.render import render_text
+
+    with open(doc, 'r') as fp:
+        render_text(text=fp.read(),
+                    output_base_path=output_dir / doc,
+                    paper_size=paper_size,
+                    margins=margins,
+                    font=font,
+                    language=language,
+                    base_dir=base_dir)
 
 
 @cli.command('render')
+@click.pass_context
 @click.option('-p', '--paper-size', default=(210, 297), show_default=True,
               type=(int, int),
               help='Paper size `(width, height)` in mm.')
@@ -57,18 +72,22 @@ def cli(verbose):
               help='Language in country code-language format to set for '
               'language-specific rendering. If none is set, the system '
               'default will be used.')
-@click.option('-b', '--base-dir', default=None, type=click.Choice(['L, 'R'']),
+@click.option('-b', '--base-dir', default=None, type=click.Choice(['L', 'R']),
               help='Base direction for Unicode BiDi algorithm.')
-@click.option('-O', '--output-dir', type=click.Path(exists=False,
-                                                    dir_okay=True,
-                                                    file_okay=False,
-                                                    writable=True,
-                                                    path_type=Path),
+@click.option('-O', '--output-dir',
+              type=click.Path(exists=False,
+                              dir_okay=True,
+                              file_okay=False,
+                              writable=True,
+                              path_type=Path),
               show_default=True,
               default=Path('.'),
-              help='Suffix for output files from batch and PDF inputs.')
-@click.argument('docs', type=click.File('r'), nargs=-1)
-def render(paper_size: Tuple[int, int],
+              help='Base output path to place PDF and XML outputs into.')
+@click.argument('docs',
+                type=click.Path(exists=True, dir_okay=False, readable=True, path_type=Path),
+                nargs=-1)
+def render(ctx,
+           paper_size: Tuple[int, int],
            margins: Tuple[int, int, int, int],
            font: str,
            language: str,
@@ -76,18 +95,50 @@ def render(paper_size: Tuple[int, int],
            output_dir: 'PathLike',
            docs):
     """
-    Retrieves a model description from the repository.
+    Renders text files into PDF documents and creates parallel ALTO facsimiles.
     """
-    from pangoline.render import render_text
     output_dir.mkdir(exist_ok=True)
-    with Progress() as progress:
+
+    with Pool(ctx.meta['workers'], maxtasksperchild=1000) as pool, Progress() as progress:
         render_task = progress.add_task('Rendering', total=len(docs), visible=True)
-        for doc in docs:
-            progress.update(render_task, total=len(docs), advance=1, description=f'Rendering {doc.name}')
-            render_text(doc.read(),
-                        output_dir / Path(doc.name).name,
-                        paper_size=paper_size,
-                        margins=margins,
-                        font=font,
-                        language=language,
-                        base_dir=base_dir)
+        for _ in pool.imap_unordered(partial(_render_doc,
+                                             output_dir=output_dir,
+                                             paper_size=paper_size,
+                                             margins=margins,
+                                             font=font,
+                                             language=language,
+                                             base_dir=base_dir), docs):
+            progress.update(render_task, total=len(docs), advance=1)
+
+
+@cli.command('rasterize')
+@click.pass_context
+@click.option('-d', '--dpi', default=300, show_default=True,
+              help='Resolution for PDF rasterization.')
+@click.option('-O', '--output-dir',
+              type=click.Path(exists=False,
+                              dir_okay=True,
+                              file_okay=False,
+                              writable=True,
+                              path_type=Path),
+              show_default=True,
+              default=Path('.'),
+              help='Base output path to place image and rewritten XML files into.')
+@click.argument('docs',
+                type=click.Path(exists=True, dir_okay=False, readable=True, path_type=Path),
+                nargs=-1)
+def rasterize(ctx,
+              dpi: int,
+              output_dir: 'PathLike',
+              docs):
+    """
+    Accepts ALTO XML files created with `pangoline render`, rasterizes PDF
+    files linked in them with the chosen resolution, and rewrites the physical
+    coordinates in the ALTO to the rasterized pixel coordinates.
+    """
+    from pangoline.rasterize import rasterize_document
+    output_dir.mkdir(exist_ok=True)
+    with Pool(ctx.meta['workers'], maxtasksperchild=1000) as pool, Progress() as progress:
+        rasterize_task = progress.add_task('Rasterizing', total=len(docs), visible=True)
+        for _ in pool.imap_unordered(partial(rasterize_document, output_base_path=output_dir, dpi=dpi), docs):
+            progress.update(rasterize_task, total=len(docs), advance=1)
