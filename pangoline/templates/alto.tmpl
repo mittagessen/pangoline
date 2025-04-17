@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<alto xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns="http://www.loc.gov/standards/alto/ns-v4#"
+    xsi:schemaLocation="http://www.loc.gov/standards/alto/ns-v4# http://www.loc.gov/standards/alto/v4/alto-4-3.xsd">
+    <Description>
+        <MeasurementUnit>mm</MeasurementUnit>
+        <sourceImageInformation>
+            <fileName>{{ pdf_path|e }}</fileName>
+        </sourceImageInformation>
+    </Description>
+    <Layout>
+        <Page WIDTH="{{ page_width }}" HEIGHT="{{ page_height }}" PHYSICAL_IMG_NR="0" ID="page_0" LANG="{{ language }}">
+            <PrintSpace HPOS="0" VPOS="0" WIDTH="{{ page_width }}" HEIGHT="{{ page_height }}">
+              <TextBlock ID="{{ text_block_id }}{% if base_dir %} BASE_DIRECTION="{{ base_dir }}"{% endif %}>
+                {% for line in lines -%}
+                <TextLine ID="{{ line.id }}" HPOS="{{ line.top }}" VPOS="{{ line.left }}" WIDTH="{{ line.right - line.left }}" HEIGHT="{{ line.bottom - line.top }}" BASELINE="{{ line.left}},{{ line.baseline }} {{ line.right }},{{ line.baseline }}">
+                  <Shape>
+                    <Polygon POINTS="{{ line.left }},{{ line.top }} {{ line.right }},{{ line.top }} {{ line.right }},{{ line.bottom }} {{ line.left }},{{ line.bottom }}"/>
+                  </Shape>
+	            <String CONTENT="{{ line.text|e }}"/>
+                </TextLine>
+              {% endfor -%}
+              </TextBlock>
+            </PrintSpace>
+        </Page>
+    </Layout>
+</alto>
