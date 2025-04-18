@@ -99,7 +99,7 @@ def rasterize_document(doc: Union[str, 'PathLike'],
         line.set('WIDTH', str(width))
         line.set('HEIGHT', str(height))
         bl_x0, bl_y0, bl_x1, bl_y1 = _parse_alto_pointstype(line.get('BASELINE'))
-        line.set('BASELINE', f'{bl_x0 * coord_scale},{bl_y0 * coord_scale} {bl_x1 * coord_scale},{bl_y1 * coord_scale}')
+        line.set('BASELINE', f'{int(bl_x0 * coord_scale)},{int(bl_y0 * coord_scale)} {int(bl_x1 * coord_scale)},{int(bl_y1 * coord_scale)}')
         pol = line.find('.//{*}Polygon')
         pol.set('POINTS', f'{hpos},{vpos} {hpos+width},{vpos} {hpos+width},{vpos+height} {hpos},{vpos+height}')
     tree.write(output_base_path / doc, encoding='utf-8')
