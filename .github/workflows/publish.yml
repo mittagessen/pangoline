@@ -7,6 +7,9 @@ jobs:
   build-n-publish-pypi:
     name: Build and publish Python 🐍 distributions 📦 to PyPI and TestPyPI
     runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/pangoline-tool
     permissions:
       id-token: write
     if: startsWith(github.ref, 'refs/tags/')
