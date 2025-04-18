@@ -16,7 +16,9 @@ You'll need PyGObject and the Pango/Cairo libraries on your system. As
 PyGObject is only shipped in source form this also requires a C compiler and
 the usual build environment dependencies installed. An easier way is to use conda:
 
-    ~> conda install -c conda-forge pygobject pango Cairo click jinja2 rich pypdfium2 lxml
+    ~> conda create --name pangoline-py3.11 -c conda-forge python=3.11
+    ~> conda activate pangoline-py3.11
+    ~> conda install -c conda-forge pygobject pango Cairo click jinja2 rich pypdfium2 lxml pillow
     ~> pip install --no-deps .
 
 ## Usage
