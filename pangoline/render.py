@@ -45,9 +45,7 @@ def render_text(text: str,
     ALTO files for each page.
 
     PDF output will be single column, justified text without word breaking.
-    Paragraphs will automatically be split once a page is full but the last
-    line of the page will not be justified if the paragraph continues on the
-    next page.
+    Paragraphs will automatically be split once a page is full.
 
     ALTO file output contains baselines and bounding boxes for each line in the
     text. The unit of measurement in these files is mm.
@@ -84,47 +82,58 @@ def render_text(text: str,
                  'L': Pango.Direction.LTR,
                  None: None}[base_dir]
 
-
     utf8_text = text.encode('utf-8')
 
-    text_offset = 0
+    dummy_surface = cairo.PDFSurface(None, 1, 1)
+    dummy_context = cairo.Context(dummy_surface)
+
+    # as it is difficult to truncate a text containing RTL runs to split it
+    # into pages we render the whole text into a single PangoLayout and then
+    # manually place each line on the correct position of a cairo context for
+    # each page, translating the vertical coordinates by a print space offset.
+
+    layout = PangoCairo.create_layout(dummy_context)
+    layout.set_justify(True)
+    layout.set_width(pango_text_width)
+    layout.set_wrap(Pango.WrapMode.WORD_CHAR)
+    p_context = layout.get_context()
+    p_context.set_language(pango_lang)
+    if pango_dir:
+        p_context.set_base_dir(pango_dir)
+    layout.context_changed()
+
+    layout.set_font_description(font_desc)
+
+    layout.set_text(text)
+
+    line_it = layout.get_iter()
+
+    page_print_space = Pango.units_from_double(height-(bottom_margin+top_margin))
 
     for page_idx in count():
+        print_space_offset = page_idx * page_print_space
+
+        pdf_output_path = output_base_path.with_suffix(f'.{page_idx}.pdf')
+        alto_output_path = output_base_path.with_suffix(f'.{page_idx}.xml')
+
         line_splits = []
 
-        # draw text first on dummy surface to get number of lines that fit on
-        # page.
-        dummy_surface = cairo.PDFSurface(None, 1, 1)
-        dummy_context = cairo.Context(dummy_surface)
+        pdf_surface = cairo.PDFSurface(pdf_output_path, width, height)
+        context = cairo.Context(pdf_surface)
+        context.translate(left_margin, top_margin)
 
-        dummy_layout = PangoCairo.create_layout(dummy_context)
-        dummy_layout.set_justify(True)
-        dummy_layout.set_width(pango_text_width)
-        dummy_layout.set_wrap(Pango.WrapMode.WORD_CHAR)
-        p_context = dummy_layout.get_context()
-        p_context.set_language(pango_lang)
-        if pango_dir:
-            p_context.set_base_dir(pango_dir)
-        dummy_layout.context_changed()
-
-        dummy_layout.set_font_description(font_desc)
-
-        dummy_layout.set_text(utf8_text[text_offset:].decode('utf-8'))
-
-        line_it = dummy_layout.get_iter()
         while not line_it.at_last_line():
             line = line_it.get_line_readonly()
             baseline = line_it.get_baseline()
-            if baseline > Pango.units_from_double(height-(bottom_margin+top_margin)):
+            if baseline > print_space_offset + page_print_space:
                 break
             s_idx, e_idx = line.start_index, line.length
-            line_text = utf8_text[text_offset+s_idx:text_offset+s_idx+e_idx].decode('utf-8')
-            if line_text.strip():
+            line_text = utf8_text[s_idx:s_idx+e_idx].decode('utf-8')
+            if line_text := line_text.strip():
                 # line direction determines reference point of extents
                 line_dir = line.get_resolved_direction()
-
                 _, extents = line.get_extents()
-                bl = Pango.units_to_double(baseline) + top_margin
+                bl = Pango.units_to_double(baseline - print_space_offset) + top_margin
                 top = bl + Pango.units_to_double(extents.y)
                 bottom = top + Pango.units_to_double(extents.height)
                 if line_dir == Pango.Direction.RTL:
@@ -134,16 +143,16 @@ def render_text(text: str,
                     left = Pango.units_to_double(extents.x) + left_margin
                     right = left + Pango.units_to_double(extents.width)
                 line_splits.append({'id': str(uuid.uuid4()),
-                                    'text': line_text.strip(),
-                                    'baseline': bl / _mm_point,
-                                    'top': top / _mm_point,
-                                    'bottom': bottom / _mm_point,
-                                    'left': left / _mm_point,
-                                    'right': right / _mm_point})
+                                    'text': line_text,
+                                    'baseline': int(round(bl / _mm_point)),
+                                    'top': int(round(top / _mm_point)),
+                                    'bottom': int(round(bottom / _mm_point)),
+                                    'left': int(round(left / _mm_point)),
+                                    'right': int(round(right / _mm_point))})
+            context.move_to(left - left_margin, bl - top_margin)
+            PangoCairo.show_layout_line(context, line)
             line_it.next_line()
 
-        pdf_output_path = output_base_path.with_suffix(f'.{page_idx}.pdf')
-        alto_output_path = output_base_path.with_suffix(f'.{page_idx}.xml')
         # write ALTO XML file
         with open(alto_output_path, 'w') as fo:
             fo.write(tmpl.render(pdf_path=pdf_output_path.name,
@@ -154,26 +163,6 @@ def render_text(text: str,
                                  page_height=paper_size[1],
                                  lines=line_splits))
 
-        # draw on actual surface
-        pdf_surface = cairo.PDFSurface(pdf_output_path, width, height)
-        context = cairo.Context(pdf_surface)
-        context.translate(left_margin, top_margin)
-
-        layout = PangoCairo.create_layout(context)
-        p_context = layout.get_context()
-        p_context.set_language(pango_lang)
-        if pango_dir:
-            p_context.set_base_dir(pango_dir)
-        layout.context_changed()
-        layout.set_justify(True)
-        layout.set_width(pango_text_width)
-        layout.set_wrap(Pango.WrapMode.WORD_CHAR)
-        layout.set_font_description(font_desc)
-
-        layout.set_text(utf8_text[text_offset:text_offset+s_idx+e_idx].decode('utf-8'))
-
-        PangoCairo.show_layout(context, layout)
-        text_offset += s_idx+e_idx
-        if text_offset + 1 >= len(utf8_text):
-            break
         pdf_surface.finish()
+        if line_it.at_last_line():
+            break

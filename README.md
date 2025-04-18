@@ -8,8 +8,7 @@ It is intended to support the rendering of most of the world's writing systems
 in order to create synthetic page-level training data for automatic text
 recognition systems. Functionality is fairly basic for now. PDF output is
 single column, justified text without word breaking. Paragraphs are split
-automatically once a page is full but the last line of the page will not be
-justified if the paragraph continues on the next page.
+automatically once a page is full.
 
 ## Installation
 
