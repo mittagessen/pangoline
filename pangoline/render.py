@@ -120,19 +120,26 @@ def render_text(text: str,
             s_idx, e_idx = line.start_index, line.length
             line_text = utf8_text[text_offset+s_idx:text_offset+s_idx+e_idx].decode('utf-8')
             if line_text.strip():
+                # line direction determines reference point of extents
+                line_dir = line.get_resolved_direction()
+
                 _, extents = line.get_extents()
                 bl = Pango.units_to_double(baseline) + top_margin
                 top = bl + Pango.units_to_double(extents.y)
                 bottom = top + Pango.units_to_double(extents.height)
-                left = Pango.units_to_double(extents.x) + left_margin
-                right = left + Pango.units_to_double(extents.width)
+                if line_dir == Pango.Direction.RTL:
+                    right = (width - right_margin) - Pango.units_to_double(extents.x)
+                    left = right - Pango.units_to_double(extents.width)
+                elif line_dir == Pango.Direction.LTR:
+                    left = Pango.units_to_double(extents.x) + left_margin
+                    right = left + Pango.units_to_double(extents.width)
                 line_splits.append({'id': str(uuid.uuid4()),
                                     'text': line_text.strip(),
-                                    'baseline': int(bl / _mm_point),
-                                    'top': int(top / _mm_point),
-                                    'bottom': int(bottom / _mm_point),
-                                    'left': int(left / _mm_point),
-                                    'right': int(right / _mm_point)})
+                                    'baseline': bl / _mm_point,
+                                    'top': top / _mm_point,
+                                    'bottom': bottom / _mm_point,
+                                    'left': left / _mm_point,
+                                    'right': right / _mm_point})
             line_it.next_line()
 
         pdf_output_path = output_base_path.with_suffix(f'.{page_idx}.pdf')

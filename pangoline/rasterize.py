@@ -16,15 +16,36 @@
 pangoline.rasterize
 ~~~~~~~~~~~~~~~~~~~
 """
+import re
 import pypdfium2 as pdfium
 
 from lxml import etree
 from pathlib import Path
-from itertools import count
-from typing import Union, Tuple, Literal, Optional, TYPE_CHECKING
+from itertools import count, groupby
+from typing import Union, Tuple, Literal, Optional, TYPE_CHECKING, List
 
 if TYPE_CHECKING:
     from os import PathLike
+
+
+@staticmethod
+def _parse_alto_pointstype(coords: str) -> List[Tuple[float, float]]:
+    """
+    ALTO's PointsType is underspecified so a variety of serializations are valid:
+
+        x0, y0 x1, y1 ...
+        x0 y0 x1 y1 ...
+        (x0, y0) (x1, y1) ...
+        (x0 y0) (x1 y1) ...
+
+    Returns:
+        A list of tuples [(x0, y0), (x1, y1), ...]
+    """
+    float_re = re.compile(r'[-+]?(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?')
+    points = [float(point.group()) for point in float_re.finditer(coords)]
+    if len(points) % 2:
+        raise ValueError(f'Odd number of points in points sequence: {points}')
+    return points
 
 
 def rasterize_document(doc: Union[str, 'PathLike'],
@@ -57,8 +78,8 @@ def rasterize_document(doc: Union[str, 'PathLike'],
     # rasterize and save as png
     pdf_page =  pdfium.PdfDocument(pdf_file).get_page(0)
     im = pdf_page.render(scale=dpi*_dpi_point).to_pil()
-    fileName.text = str(output_base_path / doc.with_suffix('.png').name)
-    im.save(fileName.text, format='png', optimize=True)
+    fileName.text = doc.with_suffix('.png').name
+    im.save(output_base_path / fileName.text, format='png', optimize=True)
 
     # rewrite coordinates
     page = tree.find('.//{*}Page')
@@ -69,15 +90,16 @@ def rasterize_document(doc: Union[str, 'PathLike'],
     printspace.set('HEIGHT', str(im.height))
 
     for line in tree.findall('.//{*}TextLine'):
-        hpos = int(int(line.get('HPOS')) * coord_scale)
-        vpos = int(int(line.get('VPOS')) * coord_scale)
-        width = int(int(line.get('WIDTH')) * coord_scale)
-        height = int(int(line.get('HEIGHT')) * coord_scale)
+        hpos = int(float(line.get('HPOS')) * coord_scale)
+        vpos = int(float(line.get('VPOS')) * coord_scale)
+        width = int(float(line.get('WIDTH')) * coord_scale)
+        height = int(float(line.get('HEIGHT')) * coord_scale)
         line.set('HPOS', str(hpos))
         line.set('VPOS', str(vpos))
         line.set('WIDTH', str(width))
         line.set('HEIGHT', str(height))
-        line.set('BASELINE', f'{hpos},{vpos} {hpos+width},{vpos+height}')
+        bl_x0, bl_y0, bl_x1, bl_y1 = _parse_alto_pointstype(line.get('BASELINE'))
+        line.set('BASELINE', f'{bl_x0 * coord_scale},{bl_y0 * coord_scale} {bl_x1 * coord_scale},{bl_y1 * coord_scale}')
         pol = line.find('.//{*}Polygon')
         pol.set('POINTS', f'{hpos},{vpos} {hpos+width},{vpos} {hpos+width},{vpos+height} {hpos},{vpos+height}')
     tree.write(output_base_path / doc, encoding='utf-8')
