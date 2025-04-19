@@ -17,6 +17,7 @@ pangoline.render
 ~~~~~~~~~~~~~~~~
 """
 import gi
+import math
 import uuid
 import cairo
 
@@ -132,24 +133,27 @@ def render_text(text: str,
             if line_text := line_text.strip():
                 # line direction determines reference point of extents
                 line_dir = line.get_resolved_direction()
-                _, extents = line.get_extents()
+                ink_extents, log_extents = line.get_extents()
+                Pango.extents_to_pixels(ink_extents)
                 bl = Pango.units_to_double(baseline - print_space_offset) + top_margin
-                top = bl + Pango.units_to_double(extents.y)
-                bottom = top + Pango.units_to_double(extents.height)
+                top = bl + ink_extents.y
+                bottom = top + ink_extents.height
                 if line_dir == Pango.Direction.RTL:
-                    right = (width - right_margin) - Pango.units_to_double(extents.x)
-                    left = right - Pango.units_to_double(extents.width)
+                    right = (width - right_margin) - ink_extents.x
+                    left = right - ink_extents.width
+                    lleft = (width - right_margin) - Pango.units_to_double(log_extents.x + log_extents.width)
                 elif line_dir == Pango.Direction.LTR:
-                    left = Pango.units_to_double(extents.x) + left_margin
-                    right = left + Pango.units_to_double(extents.width)
+                    left = ink_extents.x + left_margin
+                    lleft = Pango.units_to_double(log_extents.x) + left_margin
+                    right = left + ink_extents.width
                 line_splits.append({'id': str(uuid.uuid4()),
                                     'text': line_text,
                                     'baseline': int(round(bl / _mm_point)),
-                                    'top': int(round(top / _mm_point)),
-                                    'bottom': int(round(bottom / _mm_point)),
-                                    'left': int(round(left / _mm_point)),
-                                    'right': int(round(right / _mm_point))})
-            context.move_to(left - left_margin, bl - top_margin)
+                                    'top': int(math.floor(top / _mm_point)),
+                                    'bottom': int(math.ceil(bottom / _mm_point)),
+                                    'left': int(math.floor(left / _mm_point)),
+                                    'right': int(math.ceil(right / _mm_point))})
+            context.move_to(lleft - left_margin, bl - top_margin)
             PangoCairo.show_layout_line(context, line)
             line_it.next_line()
 
