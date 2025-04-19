@@ -66,3 +66,12 @@ especially for rasterization with overlays:
 
     ~> pangoline --workers 8 render *.txt
     ~> pangoline --workers 8 rasterize *.xml
+
+## Funding
+
+<table border="0">
+ <tr>
+    <td> <img src="https://raw.githubusercontent.com/mittagessen/kraken/main/docs/_static/normal-reproduction-low-resolution.jpg" alt="Co-financed by the European Union" width="100"/></td>
+    <td>This project was funded in part by the European Union. (ERC, MiDRASH,project number 101071829).</td>
+ </tr>
+</table>
