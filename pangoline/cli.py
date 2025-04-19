@@ -19,6 +19,8 @@ pangoline.cli
 Command line driver for rendering text.
 """
 import logging
+import random
+import os
 
 import click
 
@@ -32,7 +34,6 @@ from typing import Tuple, Literal, Optional
 logging.captureWarnings(True)
 logger = logging.getLogger('pangoline')
 
-
 @click.group(chain=False)
 @click.version_option()
 @click.option('--workers', show_default=True, default=1, type=click.IntRange(1), help='Number of worker processes.')
@@ -42,7 +43,6 @@ def cli(workers):
     """
     ctx = click.get_current_context()
     ctx.meta['workers'] = workers
-
 
 def _render_doc(doc, output_dir, paper_size, margins, font, language,
                 base_dir):
@@ -56,7 +56,6 @@ def _render_doc(doc, output_dir, paper_size, margins, font, language,
                     font=font,
                     language=language,
                     base_dir=base_dir)
-
 
 @cli.command('render')
 @click.pass_context
@@ -110,11 +109,12 @@ def render(ctx,
                                              base_dir=base_dir), docs):
             progress.update(render_task, total=len(docs), advance=1)
 
-
 @cli.command('rasterize')
 @click.pass_context
 @click.option('-d', '--dpi', default=300, show_default=True,
               help='Resolution for PDF rasterization.')
+@click.option('--backgrounds', default=None, type=click.Path(exists=True, file_okay=False, readable=True, path_type=Path),
+              help='Path to folder containing background images.')
 @click.option('-O', '--output-dir',
               type=click.Path(exists=False,
                               dir_okay=True,
@@ -129,6 +129,7 @@ def render(ctx,
                 nargs=-1)
 def rasterize(ctx,
               dpi: int,
+              backgrounds: Optional[Path],
               output_dir: 'PathLike',
               docs):
     """
@@ -140,5 +141,5 @@ def rasterize(ctx,
     output_dir.mkdir(exist_ok=True)
     with Pool(ctx.meta['workers'], maxtasksperchild=1000) as pool, Progress() as progress:
         rasterize_task = progress.add_task('Rasterizing', total=len(docs), visible=True)
-        for _ in pool.imap_unordered(partial(rasterize_document, output_base_path=output_dir, dpi=dpi), docs):
+        for _ in pool.imap_unordered(partial(rasterize_document, output_base_path=output_dir, dpi=dpi, backgrounds=backgrounds), docs):
             progress.update(rasterize_task, total=len(docs), advance=1)
