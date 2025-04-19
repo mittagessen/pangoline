@@ -36,6 +36,12 @@ base direction can be manually set, for example:
 
     ~> pangoline render -p 216 279 -l en-us -f "Noto Sans 24" doc.txt
 
+Text can also be styled with [Pango
+Markup](https://docs.gtk.org/Pango/pango_markup.html). Parsing is enabled per
+default but can be disabled with a switch:
+
+    ~> pangoline render --no-markup doc.txt
+
 ### Rasterization
 
 In a second step those vector files can be rasterized into PNGs and the

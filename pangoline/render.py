@@ -34,13 +34,15 @@ from jinja2 import Environment, PackageLoader
 if TYPE_CHECKING:
     from os import PathLike
 
+
 def render_text(text: str,
                 output_base_path: Union[str, 'PathLike'],
                 paper_size: Tuple[int, int] = (210, 297),
                 margins: Tuple[int, int, int, int] = (25, 30, 20, 20),
                 font: str = 'Serif Normal 10',
                 language: Optional[str] = None,
-                base_dir: Optional[Literal['R', 'L']] = None):
+                base_dir: Optional[Literal['R', 'L']] = None,
+                enable_markup: bool = True):
     """
     Renders (horizontal) text into a sequence of PDF files and creates parallel
     ALTO files for each page.
@@ -83,8 +85,6 @@ def render_text(text: str,
                  'L': Pango.Direction.LTR,
                  None: None}[base_dir]
 
-    utf8_text = text.encode('utf-8')
-
     dummy_surface = cairo.PDFSurface(None, 1, 1)
     dummy_context = cairo.Context(dummy_surface)
 
@@ -105,7 +105,14 @@ def render_text(text: str,
 
     layout.set_font_description(font_desc)
 
-    layout.set_text(text)
+    if enable_markup:
+        _, attr, text, _ = Pango.parse_markup(text, -1, u'\x00')
+        layout.set_text(text)
+        layout.set_attributes(attr)
+    else:
+        layout.set_text(text)
+
+    utf8_text = text.encode('utf-8')
 
     line_it = layout.get_iter()
 

@@ -22,11 +22,11 @@ import pypdfium2 as pdfium
 from PIL import Image
 from lxml import etree
 from pathlib import Path
-from itertools import count, groupby
-from typing import Union, Tuple, Literal, Optional, TYPE_CHECKING, List
+from typing import Union, Tuple, Optional, TYPE_CHECKING, List
 
 if TYPE_CHECKING:
     from os import PathLike
+
 
 @staticmethod
 def _parse_alto_pointstype(coords: str) -> List[Tuple[float, float]]:
@@ -80,11 +80,11 @@ def rasterize_document(doc: Union[str, 'PathLike'],
     _dpi_point = 1 / 72
 
     tree = etree.parse(doc)
-    mmu = tree.find('.//{*}MeasurementUnit').text = 'pixel'
+    tree.find('.//{*}MeasurementUnit').text = 'pixel'
     fileName = tree.find('.//{*}fileName')
     pdf_file = fileName.text
     # rasterize and save as png
-    pdf_page =  pdfium.PdfDocument(pdf_file).get_page(0)
+    pdf_page = pdfium.PdfDocument(pdf_file).get_page(0)
     transparency = 0 if writing_surface else 255
     im = pdf_page.render(scale=dpi*_dpi_point, fill_color=(255, 255, 255, transparency)).to_pil()
     if writing_surface:

@@ -46,7 +46,7 @@ def cli(workers):
 
 
 def _render_doc(doc, output_dir, paper_size, margins, font, language,
-                base_dir):
+                base_dir, enable_markup):
     from pangoline.render import render_text
 
     with open(doc, 'r') as fp:
@@ -56,7 +56,8 @@ def _render_doc(doc, output_dir, paper_size, margins, font, language,
                     margins=margins,
                     font=font,
                     language=language,
-                    base_dir=base_dir)
+                    base_dir=base_dir,
+                    enable_markup=enable_markup)
 
 
 @cli.command('render')
@@ -84,6 +85,9 @@ def _render_doc(doc, output_dir, paper_size, margins, font, language,
               show_default=True,
               default=Path('.'),
               help='Base output path to place PDF and XML outputs into.')
+@click.option('--markup/--no-markup',
+              default=True,
+              help='Switch for Pango markup parsing in input texts.')
 @click.argument('docs',
                 type=click.Path(exists=True, dir_okay=False, readable=True, path_type=Path),
                 nargs=-1)
@@ -94,6 +98,7 @@ def render(ctx,
            language: str,
            base_dir: Optional[Literal['L', 'R']],
            output_dir: 'PathLike',
+           markup: bool,
            docs):
     """
     Renders text files into PDF documents and creates parallel ALTO facsimiles.
@@ -108,7 +113,8 @@ def render(ctx,
                                              margins=margins,
                                              font=font,
                                              language=language,
-                                             base_dir=base_dir), docs):
+                                             base_dir=base_dir,
+                                             enable_markup=markup), docs):
             progress.update(render_task, total=len(docs), advance=1)
 
 
