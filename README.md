@@ -23,10 +23,10 @@ the usual build environment dependencies installed. An easier way is to use cond
 
 ## Usage
 
+### Rendering
+
 PangoLine renders text first into vector PDFs and ALTO facsimiles using some
 configurable "physical" dimensions.
-
-### Rendering
 
     ~> pangoline render doc.txt
     Rendering ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:00
