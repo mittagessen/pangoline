@@ -19,6 +19,7 @@ pangoline.rasterize
 import re
 import pypdfium2 as pdfium
 
+from PIL import Image
 from lxml import etree
 from pathlib import Path
 from itertools import count, groupby
@@ -26,7 +27,6 @@ from typing import Union, Tuple, Literal, Optional, TYPE_CHECKING, List
 
 if TYPE_CHECKING:
     from os import PathLike
-
 
 @staticmethod
 def _parse_alto_pointstype(coords: str) -> List[Tuple[float, float]]:
@@ -50,6 +50,7 @@ def _parse_alto_pointstype(coords: str) -> List[Tuple[float, float]]:
 
 def rasterize_document(doc: Union[str, 'PathLike'],
                        output_base_path: Union[str, 'PathLike'],
+                       writing_surface: Optional[Union[str, 'PathLike']] = None,
                        dpi: int = 300):
     """
     Takes an ALTO XML file, rasterizes the associated PDF document with the
@@ -62,11 +63,18 @@ def rasterize_document(doc: Union[str, 'PathLike'],
         doc: Input ALTO file
         output_base_path: Directory to write output image file and rewritten
                           ALTO into.
+        writing_surfaces: Path to image file used as a background writing
+                          surface on which the rasterized text is pasted on.
+                          The image will be resized to the selected PDF
+                          resolution.
         dpi: DPI to render the PDF
 
     """
     output_base_path = Path(output_base_path)
     doc = Path(doc)
+
+    if writing_surface:
+        writing_surface = Image.open(writing_surface).convert('RGBA')
 
     coord_scale = dpi / 25.4
     _dpi_point = 1 / 72
@@ -77,8 +85,15 @@ def rasterize_document(doc: Union[str, 'PathLike'],
     pdf_file = fileName.text
     # rasterize and save as png
     pdf_page =  pdfium.PdfDocument(pdf_file).get_page(0)
-    im = pdf_page.render(scale=dpi*_dpi_point).to_pil()
+    transparency = 0 if writing_surface else 255
+    im = pdf_page.render(scale=dpi*_dpi_point, fill_color=(255, 255, 255, transparency)).to_pil()
+    if writing_surface:
+        writing_surface = writing_surface.resize(im.size)
+        writing_surface.alpha_composite(im)
+        im = writing_surface
+
     fileName.text = doc.with_suffix('.png').name
+
     im.save(output_base_path / fileName.text, format='png', optimize=True)
 
     # rewrite coordinates

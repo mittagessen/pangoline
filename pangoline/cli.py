@@ -26,6 +26,7 @@ from pathlib import Path
 from rich.progress import Progress
 from multiprocessing import Pool
 from functools import partial
+from itertools import zip_longest
 
 from typing import Tuple, Literal, Optional
 
@@ -111,6 +112,14 @@ def render(ctx,
             progress.update(render_task, total=len(docs), advance=1)
 
 
+def _rasterize_doc(inp, output_base_path, dpi):
+    from pangoline.rasterize import rasterize_document
+    rasterize_document(doc=inp[0],
+                       output_base_path=output_base_path,
+                       writing_surface=inp[1],
+                       dpi=dpi)
+
+
 @cli.command('rasterize')
 @click.pass_context
 @click.option('-d', '--dpi', default=300, show_default=True,
@@ -124,21 +133,34 @@ def render(ctx,
               show_default=True,
               default=Path('.'),
               help='Base output path to place image and rewritten XML files into.')
+@click.option('-w', '--writing-surface',
+              type=click.Path(exists=True, dir_okay=False, readable=True, path_type=Path),
+              default=None,
+              multiple=True,
+              help='Image file to overlay the rasterized text on. If multiple '
+              ' are given a random one will be selected for each input file.')
 @click.argument('docs',
                 type=click.Path(exists=True, dir_okay=False, readable=True, path_type=Path),
                 nargs=-1)
 def rasterize(ctx,
               dpi: int,
               output_dir: 'PathLike',
+              writing_surface,
               docs):
     """
     Accepts ALTO XML files created with `pangoline render`, rasterizes PDF
     files linked in them with the chosen resolution, and rewrites the physical
     coordinates in the ALTO to the rasterized pixel coordinates.
     """
-    from pangoline.rasterize import rasterize_document
     output_dir.mkdir(exist_ok=True)
+
+    if writing_surface:
+        from random import choices
+        writing_surface = choices(writing_surface, k=len(docs))
+
+    docs = list(zip_longest(docs, writing_surface))
+
     with Pool(ctx.meta['workers'], maxtasksperchild=1000) as pool, Progress() as progress:
         rasterize_task = progress.add_task('Rasterizing', total=len(docs), visible=True)
-        for _ in pool.imap_unordered(partial(rasterize_document, output_base_path=output_dir, dpi=dpi), docs):
+        for _ in pool.imap_unordered(partial(_rasterize_doc, output_base_path=output_dir, dpi=dpi), docs):
             progress.update(rasterize_task, total=len(docs), advance=1)
