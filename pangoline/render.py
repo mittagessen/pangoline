@@ -39,8 +39,7 @@ def render_text(text: str,
                 margins: Tuple[int, int, int, int] = (25, 30, 20, 20),
                 font: str = 'Serif Normal 10',
                 language: Optional[str] = None,
-                base_dir: Optional[Literal['R', 'L']] = None,
-                enable_markup: bool = True):
+                base_dir: Optional[Literal['R', 'L']] = None):
     """
     Renders (horizontal) text into a sequence of PDF files and creates parallel
     ALTO files for each page.
@@ -60,7 +59,6 @@ def render_text(text: str,
         language: Set language to enable language-specific rendering. If none
                   is set, the system default will be used.
         base_dir: Sets the base direction of the BiDi algorithm.
-        enable_markup: Enables Pango markup parsing of input text.
     """
     output_base_path = Path(output_base_path)
 
@@ -106,10 +104,7 @@ def render_text(text: str,
 
     layout.set_font_description(font_desc)
 
-    if enable_markup:
-        layout.set_markup()
-    else:
-        layout.set_text(text)
+    layout.set_text(text)
 
     line_it = layout.get_iter()
 
@@ -137,7 +132,7 @@ def render_text(text: str,
             if line_text := line_text.strip():
                 # line direction determines reference point of extents
                 line_dir = line.get_resolved_direction()
-                extents, _ = line.get_extents()
+                _, extents = line.get_extents()
                 bl = Pango.units_to_double(baseline - print_space_offset) + top_margin
                 top = bl + Pango.units_to_double(extents.y)
                 bottom = top + Pango.units_to_double(extents.height)
