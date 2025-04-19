@@ -24,11 +24,12 @@ import os
 
 from lxml import etree
 from pathlib import Path
-from typing import Union, Tuple, Optional, TYPE_CHECKING, List
+from typing import Union, Tuple, Literal, Optional, TYPE_CHECKING, List
 
 if TYPE_CHECKING:
     from os import PathLike
 
+@staticmethod
 def _parse_alto_pointstype(coords: str) -> List[Tuple[float, float]]:
     """
     ALTO's PointsType is underspecified so a variety of serializations are valid:
@@ -41,7 +42,7 @@ def _parse_alto_pointstype(coords: str) -> List[Tuple[float, float]]:
     Returns:
         A list of tuples [(x0, y0), (x1, y1), ...]
     """
-    float_re = re.compile(r'[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?')
+    float_re = re.compile(r'[-+]?(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?')
     points = [float(point.group()) for point in float_re.finditer(coords)]
     if len(points) % 2:
         raise ValueError(f'Odd number of points in points sequence: {points}')
@@ -67,6 +68,7 @@ def rasterize_document(doc: Union[str, 'PathLike'],
     """
     output_base_path = Path(output_base_path)
     doc = Path(doc)
+
     coord_scale = dpi / 25.4
     _dpi_point = 1 / 72
 
@@ -75,6 +77,7 @@ def rasterize_document(doc: Union[str, 'PathLike'],
     fileName = tree.find('.//{*}fileName')
     pdf_file = fileName.text
 
+    # rasterize and save as png
     pdf_page = pdfium.PdfDocument(pdf_file).get_page(0)
     im = pdf_page.render(scale=dpi*_dpi_point).to_pil()
 
@@ -89,6 +92,7 @@ def rasterize_document(doc: Union[str, 'PathLike'],
     fileName.text = doc.with_suffix('.png').name
     im.save(output_base_path / fileName.text, format='png', optimize=True)
 
+    # rewrite coordinates
     page = tree.find('.//{*}Page')
     printspace = page.find('./{*}PrintSpace')
     page.set('WIDTH', str(im.width))
