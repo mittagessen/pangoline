@@ -26,8 +26,17 @@ the usual build environment dependencies installed. An easier way is to use cond
 PangoLine renders text first into vector PDFs and ALTO facsimiles using some
 configurable "physical" dimensions.
 
+### Rendering
+
     ~> pangoline render doc.txt
     Rendering ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:00
+
+Various options to direct rendering such as page size, margins, language, and
+base direction can be manually set, for example:
+
+    ~> pangoline render -p 216 279 -l en-us -f "Noto Sans 24" doc.txt
+
+### Rasterization
 
 In a second step those vector files can be rasterized into PNGs and the
 coordinates in the ALTO files scaled to the selected resolution (per default
@@ -38,11 +47,16 @@ coordinates in the ALTO files scaled to the selected resolution (per default
 
 Rasterized files and their ALTOs can be used as is as ATR training data.
 
-Various options to direct rendering such as page size, margins, language, and
-base direction can be manually set, for example:
+To obtain slightly more realistic input images it is possible to overlay the
+rasterized text into images of writing surfaces.
 
-    ~> pangoline render -p 216 279 -l en-us -f "Noto Sans 24" doc.txt
+    ~> pangoline rasterize -w ~/background_1.jpg doc.0.xml doc.1.xml ...
 
-For larger collections of texts it is advisable to parallelize processing:
+Rasterization can be invoked with multiple background images in which case they
+will be sampled randomly for each output page.
+
+For larger collections of texts it is advisable to parallelize processing,
+especially for rasterization with overlays:
 
     ~> pangoline --workers 8 render *.txt
+    ~> pangoline --workers 8 rasterize *.xml
