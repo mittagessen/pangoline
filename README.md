@@ -19,6 +19,13 @@ the usual build environment dependencies installed. An easier way is to use cond
     ~> conda create --name pangoline-py3.11 -c conda-forge python=3.11
     ~> conda activate pangoline-py3.11
     ~> conda install -c conda-forge pygobject pango Cairo click jinja2 rich pypdfium2 lxml pillow
+
+Afterwards either install from pypi:
+
+    ~> pip install pangoline-tool
+
+or directly from the checked out git repository:
+
     ~> pip install --no-deps .
 
 ## Usage
