@@ -59,7 +59,9 @@ rasterized text into images of writing surfaces.
     ~> pangoline rasterize -w ~/background_1.jpg doc.0.xml doc.1.xml ...
 
 Rasterization can be invoked with multiple background images in which case they
-will be sampled randomly for each output page.
+will be sampled randomly for each output page. A tarball with 70 empty paper
+backgrounds of different origins, digitization qualities, and states of
+preservation can be found [here](http://l.unchti.me/paper.tar).
 
 For larger collections of texts it is advisable to parallelize processing,
 especially for rasterization with overlays:
