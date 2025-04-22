@@ -160,8 +160,8 @@ def render_text(text: str,
                                     'bottom': int(math.ceil(bottom / _mm_point)),
                                     'left': int(math.floor(left / _mm_point)),
                                     'right': int(math.ceil(right / _mm_point))})
-            context.move_to(lleft - left_margin, bl - top_margin)
-            PangoCairo.show_layout_line(context, line)
+                context.move_to(lleft - left_margin, bl - top_margin)
+                PangoCairo.show_layout_line(context, line)
             line_it.next_line()
 
         # write ALTO XML file
