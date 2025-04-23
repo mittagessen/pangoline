@@ -76,6 +76,7 @@ def render_text(text: str,
     right_margin = 20 * _mm_point
 
     font_desc = Pango.font_description_from_string(font)
+    font_desc.set_features('liga=1, clig=1, dlig=1, hlig=1')
     pango_text_width = Pango.units_from_double(width-(left_margin+right_margin))
     if language:
         pango_lang = Pango.language_from_string(language)

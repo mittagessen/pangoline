@@ -65,7 +65,7 @@ def _render_doc(doc, output_dir, paper_size, margins, font, language,
 @click.option('-p', '--paper-size', default=(210, 297), show_default=True,
               type=(int, int),
               help='Paper size `(width, height)` in mm.')
-@click.option('-m', '--margins', default=(25, 30, 20, 20), show_default=True,
+@click.option('-m', '--margins', default=(25, 30, 25, 25), show_default=True,
               type=(int, int, int, int),
               help='Page margins `(top, bottom, left, right)` in mm.')
 @click.option('-f', '--font', default='Serif Normal 10', show_default=True,
