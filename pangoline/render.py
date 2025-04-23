@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 def render_text(text: str,
                 output_base_path: Union[str, 'PathLike'],
                 paper_size: Tuple[int, int] = (210, 297),
-                margins: Tuple[int, int, int, int] = (25, 30, 20, 20),
+                margins: Tuple[int, int, int, int] = (25, 30, 25, 25),
                 font: str = 'Serif Normal 10',
                 language: Optional[str] = None,
                 base_dir: Optional[Literal['R', 'L']] = None,
