@@ -51,7 +51,7 @@ def _render_doc(doc, output_dir, paper_size, margins, font, language,
 
     with open(doc, 'r') as fp:
         render_text(text=fp.read(),
-                    output_base_path=output_dir / doc,
+                    output_base_path=output_dir / doc.name,
                     paper_size=paper_size,
                     margins=margins,
                     font=font,

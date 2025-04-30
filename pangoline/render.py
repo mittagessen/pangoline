@@ -20,6 +20,7 @@ import gi
 import math
 import uuid
 import cairo
+import logging
 
 gi.require_version('Pango', '1.0')
 gi.require_version('PangoCairo', '1.0')
@@ -34,6 +35,7 @@ from jinja2 import Environment, PackageLoader
 if TYPE_CHECKING:
     from os import PathLike
 
+logger = logging.getLogger(__name__)
 
 def render_text(text: str,
                 output_base_path: Union[str, 'PathLike'],
@@ -113,6 +115,9 @@ def render_text(text: str,
     else:
         layout.set_text(text)
 
+    if unk_glyphs := layout.get_unknown_glyphs_count():
+        logger.warning(f'{unk_glyphs} unknown glyphs in text.')
+
     utf8_text = text.encode('utf-8')
 
     line_it = layout.get_iter()
@@ -124,6 +129,8 @@ def render_text(text: str,
 
         pdf_output_path = output_base_path.with_suffix(f'.{page_idx}.pdf')
         alto_output_path = output_base_path.with_suffix(f'.{page_idx}.xml')
+
+        logger.info(f'Rendering {page_idx} to {pdf_output_path}')
 
         line_splits = []
 
@@ -154,7 +161,7 @@ def render_text(text: str,
                     left = ink_extents.x + left_margin
                     lleft = Pango.units_to_double(log_extents.x) + left_margin
                     right = left + ink_extents.width
-                line_splits.append({'id': str(uuid.uuid4()),
+                line_splits.append({'id': f'_{uuid.uuid4()}',
                                     'text': line_text,
                                     'baseline': int(round(bl / _mm_point)),
                                     'top': int(math.floor(top / _mm_point)),
@@ -170,7 +177,7 @@ def render_text(text: str,
             fo.write(tmpl.render(pdf_path=pdf_output_path.name,
                                  language=pango_lang.to_string(),
                                  base_dir={'L': 'ltr', 'R': 'rtl', None: None}[base_dir],
-                                 text_block_id=str(uuid.uuid4()),
+                                 text_block_id=f'_{uuid.uuid4()}',
                                  page_width=paper_size[0],
                                  page_height=paper_size[1],
                                  lines=line_splits))
