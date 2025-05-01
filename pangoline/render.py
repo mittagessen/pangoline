@@ -37,6 +37,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+
 def render_text(text: str,
                 output_base_path: Union[str, 'PathLike'],
                 paper_size: Tuple[int, int] = (210, 297),
@@ -44,7 +45,8 @@ def render_text(text: str,
                 font: str = 'Serif Normal 10',
                 language: Optional[str] = None,
                 base_dir: Optional[Literal['R', 'L']] = None,
-                enable_markup: bool = True):
+                enable_markup: bool = True,
+                raise_unrenderable: bool = False):
     """
     Renders (horizontal) text into a sequence of PDF files and creates parallel
     ALTO files for each page.
@@ -64,6 +66,14 @@ def render_text(text: str,
         language: Set language to enable language-specific rendering. If none
                   is set, the system default will be used.
         base_dir: Sets the base direction of the BiDi algorithm.
+        enable_markup: Enables/disables Pango markup parsing
+        raise_unrenderable: raises an exception if the supplied text contains
+                            glyphs that are not contained in the selected
+                            typeface.
+
+    Raises:
+        ValueError if the text contains unrenderable glyphs and
+        raise_unrenderable is set to True.
     """
     output_base_path = Path(output_base_path)
 
@@ -116,7 +126,10 @@ def render_text(text: str,
         layout.set_text(text)
 
     if unk_glyphs := layout.get_unknown_glyphs_count():
-        logger.warning(f'{unk_glyphs} unknown glyphs in text.')
+        msg = f'{unk_glyphs} unknown glyphs in text with output {output_base_path}'
+        if raise_unrenderable:
+            raise ValueError(msg)
+        logger.warning(msg)
 
     utf8_text = text.encode('utf-8')
 
