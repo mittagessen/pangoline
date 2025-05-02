@@ -82,7 +82,7 @@ def rasterize_document(doc: Union[str, 'PathLike'],
     tree = etree.parse(doc)
     tree.find('.//{*}MeasurementUnit').text = 'pixel'
     fileName = tree.find('.//{*}fileName')
-    pdf_file = fileName.text
+    pdf_file = doc.parent / fileName.text
     # rasterize and save as png
     pdf_page = pdfium.PdfDocument(pdf_file).get_page(0)
     transparency = 0 if writing_surface else 255
