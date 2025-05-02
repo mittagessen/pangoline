@@ -18,9 +18,8 @@ pangoline.cli
 
 Command line driver for rendering text.
 """
-import logging
-
 import click
+import logging
 
 from pathlib import Path
 from rich.progress import Progress
@@ -28,10 +27,33 @@ from multiprocessing import Pool
 from functools import partial
 from itertools import zip_longest
 
-from typing import Tuple, Literal, Optional
+from typing import Tuple, Literal, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from os import PathLike
 
 logging.captureWarnings(True)
 logger = logging.getLogger('pangoline')
+
+
+def _validate_manifests(ctx, param, value):
+    images = []
+    for manifest in value:
+        try:
+            for entry in manifest.readlines():
+                im_p = Path(entry.rstrip('\r\n'))
+                if im_p.is_file():
+                    images.append(im_p)
+                else:
+                    logger.warning('Invalid entry "{}" in {}'.format(im_p, manifest.name))
+        except UnicodeDecodeError:
+            raise click.BadOptionUsage(param,
+                                       f'File {manifest.name} is not a text file. Please '
+                                       'ensure that the argument to `-W` is a manifest '
+                                       'file containing paths to image file (one per '
+                                       'line).',
+                                       ctx=ctx)
+    return images
 
 
 @click.group(chain=False)
@@ -151,6 +173,12 @@ def _rasterize_doc(inp, output_base_path, dpi):
               multiple=True,
               help='Image file to overlay the rasterized text on. If multiple '
               ' are given a random one will be selected for each input file.')
+@click.option('-W', '--surface-files',
+              default=None,
+              multiple=True,
+              callback=_validate_manifests,
+              type=click.File(mode='r', lazy=True),
+              help='File(s) with additional paths to background images data')
 @click.argument('docs',
                 type=click.Path(exists=True, dir_okay=False, readable=True, path_type=Path),
                 nargs=-1)
@@ -158,6 +186,7 @@ def rasterize(ctx,
               dpi: int,
               output_dir: 'PathLike',
               writing_surface,
+              surface_files,
               docs):
     """
     Accepts ALTO XML files created with `pangoline render`, rasterizes PDF
@@ -165,6 +194,12 @@ def rasterize(ctx,
     coordinates in the ALTO to the rasterized pixel coordinates.
     """
     output_dir.mkdir(exist_ok=True)
+
+    if not writing_surface:
+        writing_surface = []
+
+    if surface_files:
+        writing_surface.extend(surface_files)
 
     if writing_surface:
         from random import choices
