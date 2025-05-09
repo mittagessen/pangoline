@@ -109,7 +109,7 @@ def _render_doc(doc, output_dir, paper_size, margins, font, language,
               default=Path('.'),
               help='Base output path to place PDF and XML outputs into.')
 @click.option('--markup/--no-markup',
-              default=True,
+              default=False,
               help='Switch for Pango markup parsing in input texts.')
 @click.option('--skip-unrenderable/--ignore-unrenderable',
               default=True,

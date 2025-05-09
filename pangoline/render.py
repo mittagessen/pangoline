@@ -45,7 +45,7 @@ def render_text(text: str,
                 font: str = 'Serif Normal 10',
                 language: Optional[str] = None,
                 base_dir: Optional[Literal['R', 'L']] = None,
-                enable_markup: bool = True,
+                enable_markup: bool = False,
                 raise_unrenderable: bool = False):
     """
     Renders (horizontal) text into a sequence of PDF files and creates parallel
