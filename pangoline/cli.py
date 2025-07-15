@@ -27,7 +27,9 @@ from multiprocessing import Pool
 from functools import partial
 from itertools import zip_longest
 
-from typing import Tuple, Literal, Optional, TYPE_CHECKING
+from pangoline.render import _markup_colors
+
+from typing import Literal, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from os import PathLike
@@ -68,7 +70,8 @@ def cli(workers):
 
 
 def _render_doc(doc, output_dir, paper_size, margins, font, language,
-                base_dir, enable_markup, skip_unrenderable):
+                base_dir, enable_markup, random_markup,
+                random_markup_probability, skip_unrenderable):
     from pangoline.render import render_text
 
     with open(doc, 'r') as fp:
@@ -80,6 +83,8 @@ def _render_doc(doc, output_dir, paper_size, margins, font, language,
                     language=language,
                     base_dir=base_dir,
                     enable_markup=enable_markup,
+                    random_markup=random_markup,
+                    random_markup_probability=random_markup_probability,
                     raise_unrenderable=not skip_unrenderable)
 
 
@@ -111,6 +116,26 @@ def _render_doc(doc, output_dir, paper_size, margins, font, language,
 @click.option('--markup/--no-markup',
               default=False,
               help='Switch for Pango markup parsing in input texts.')
+@click.option('--random-markup', default=['style_italic', 'weight_bold',
+                                          'underline_single',
+                                          'underline_double',
+                                          'overline_single', 'shift_subscript',
+                                          'shift_superscript', 'strikethrough_true'],
+              type=click.Choice(['style_oblique', 'style_italic',
+                                 'weight_ultralight', 'weight_bold',
+                                 'weight_ultrabold', 'weight_heavy',
+                                 'variant_smallcaps', 'underline_single',
+                                 'underline_double', 'underline_low',
+                                 'underline_error', 'overline_single',
+                                 'shift_subscript', 'shift_superscript',
+                                 'strikethrough_true', 'foreground_random'] + [f'foreground_{x}' for x in _markup_colors]),
+              multiple=True, show_default=True,
+              help='Enables random markup of the input text at segments '
+              'determined by the Unicode word breaking algorithm. For the '
+              'meaning of each possible value see '
+              'https://docs.gtk.org/Pango/pango_markup.html.')
+@click.option('--random-markup-probability', default=0.0, show_default=True,
+              help='Probabilty of random markup on segments. Set to 0 to disable random markup.',)
 @click.option('--skip-unrenderable/--ignore-unrenderable',
               default=True,
               help='Skips rendering if the text contains unrenderable glyphs.')
@@ -118,13 +143,15 @@ def _render_doc(doc, output_dir, paper_size, margins, font, language,
                 type=click.Path(exists=True, dir_okay=False, readable=True, path_type=Path),
                 nargs=-1)
 def render(ctx,
-           paper_size: Tuple[int, int],
-           margins: Tuple[int, int, int, int],
+           paper_size: tuple[int, int],
+           margins: tuple[int, int, int, int],
            font: str,
            language: str,
            base_dir: Optional[Literal['L', 'R']],
            output_dir: 'PathLike',
            markup: bool,
+           random_markup: list[str],
+           random_markup_probability: float,
            skip_unrenderable: bool,
            docs):
     """
@@ -142,6 +169,8 @@ def render(ctx,
                                              language=language,
                                              base_dir=base_dir,
                                              enable_markup=markup,
+                                             random_markup=random_markup,
+                                             random_markup_probability=random_markup_probability,
                                              skip_unrenderable=skip_unrenderable), docs):
             progress.update(render_task, total=len(docs), advance=1)
 

@@ -44,10 +44,32 @@ base direction can be manually set, for example:
     ~> pangoline render -p 216 279 -l en-us -f "Noto Sans 24" doc.txt
 
 Text can also be styled with [Pango
-Markup](https://docs.gtk.org/Pango/pango_markup.html). Parsing is enabled per
-default but can be disabled with a switch:
+Markup](https://docs.gtk.org/Pango/pango_markup.html). Parsing is disabled per
+default but can be enabled with a switch:
 
-    ~> pangoline render --no-markup doc.txt
+    ~> pangoline render --markup doc.txt
+
+It is possible to randomly insert stylization of Unicode [word
+segments](https://unicode.org/reports/tr29/#Word_Boundaries) in the text. One
+or more styles will be randomly selected from a configurable list of styles:
+
+    ~> pangoline render --random-markup-probability 0.01 doc.txt
+
+The probability is the probability of at least one style being applied to any
+particular segment. A subset of the total available number of styles is enabled
+by default when a probability greater than 0 is given. To change the list of
+possible styles:
+
+    ~> pangoline render --random-markup-probability 0.01 --random-markup style_italic --random-markup variant_smallcaps doc.txt
+
+The semantics of each value can be found in the [pango documentation](https://docs.gtk.org/Pango/pango_markup.html).
+
+Styling with color is treated slightly differently than other styles. In
+general, colors are selected with the `foreground_*` style. As a large number
+of colors are known to Pango, the `foreground_random` alias exists that enables
+all possible colors:
+
+    ~> pangoline render  --random-markup-probability 0.01 --random-markup foreground_random doc.txt
 
 ### Rasterization
 

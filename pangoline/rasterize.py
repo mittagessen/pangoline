@@ -22,14 +22,14 @@ import pypdfium2 as pdfium
 from PIL import Image
 from lxml import etree
 from pathlib import Path
-from typing import Union, Tuple, Optional, TYPE_CHECKING, List
+from typing import Union, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from os import PathLike
 
 
 @staticmethod
-def _parse_alto_pointstype(coords: str) -> List[Tuple[float, float]]:
+def _parse_alto_pointstype(coords: str) -> list[tuple[float, float]]:
     """
     ALTO's PointsType is underspecified so a variety of serializations are valid:
 

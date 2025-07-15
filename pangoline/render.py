@@ -17,9 +17,11 @@ pangoline.render
 ~~~~~~~~~~~~~~~~
 """
 import gi
+import html
 import math
 import uuid
 import cairo
+import regex
 import logging
 
 gi.require_version('Pango', '1.0')
@@ -28,7 +30,7 @@ from gi.repository import Pango, PangoCairo
 
 from pathlib import Path
 from itertools import count
-from typing import Union, Tuple, Literal, Optional, TYPE_CHECKING
+from typing import Union, Literal, Optional, TYPE_CHECKING
 
 from jinja2 import Environment, PackageLoader
 
@@ -37,15 +39,77 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+_markup_mapping = {'style': 'style',
+                   'weight': 'weight',
+                   'variant': 'variant',
+                   'underline': 'underline',
+                   'overline': 'overline',
+                   'shift': 'baseline_shift',
+                   'strikethrough': 'strikethrough',
+                   'foreground': 'foreground'}
+
+_markup_colors = ['aliceblue', 'antiquewhite', 'aqua', 'aquamarine', 'azure',
+                  'beige', 'bisque', 'blanchedalmond', 'blue',
+                  'blueviolet', 'brown', 'burlywood', 'cadetblue',
+                  'chartreuse', 'chocolate', 'coral', 'cornflowerblue',
+                  'cornsilk', 'crimson', 'cyan', 'darkblue', 'darkcyan',
+                  'darkgoldenrod', 'darkgray', 'darkgrey', 'darkgreen',
+                  'darkkhaki', 'darkmagenta', 'darkolivegreen', 'darkorange',
+                  'darkorchid', 'darkred', 'darksalmon', 'darkseagreen',
+                  'darkslateblue', 'darkslategray', 'darkslategrey',
+                  'darkturquoise', 'darkviolet', 'deeppink', 'deepskyblue',
+                  'dimgray', 'dimgrey', 'dodgerblue', 'firebrick',
+                  'floralwhite', 'forestgreen', 'fuchsia', 'gainsboro',
+                  'ghostwhite', 'gold', 'goldenrod', 'gray', 'grey', 'green',
+                  'greenyellow', 'honeydew', 'hotpink', 'indianred', 'indigo',
+                  'ivory', 'khaki', 'lavender', 'lavenderblush', 'lawngreen',
+                  'lemonchiffon', 'lightblue', 'lightcoral', 'lightcyan',
+                  'lightgoldenrodyellow', 'lightgray', 'lightgrey',
+                  'lightgreen', 'lightpink', 'lightsalmon', 'lightseagreen',
+                  'lightskyblue', 'lightslategray', 'lightslategrey',
+                  'lightsteelblue', 'lightyellow', 'lime', 'limegreen',
+                  'linen', 'magenta', 'maroon', 'mediumaquamarine',
+                  'mediumblue', 'mediumorchid', 'mediumpurple',
+                  'mediumseagreen', 'mediumslateblue', 'mediumspringgreen',
+                  'mediumturquoise', 'mediumvioletred', 'midnightblue',
+                  'mintcream', 'mistyrose', 'moccasin', 'navajowhite', 'navy',
+                  'oldlace', 'olive', 'olivedrab', 'orange', 'orangered',
+                  'orchid', 'palegoldenrod', 'palegreen', 'paleturquoise',
+                  'palevioletred', 'papayawhip', 'peachpuff', 'peru', 'pink',
+                  'plum', 'powderblue', 'purple', 'red', 'rosybrown',
+                  'royalblue', 'rebeccapurple', 'saddlebrown', 'salmon',
+                  'sandybrown', 'seagreen', 'seashell', 'sienna', 'silver',
+                  'skyblue', 'slateblue', 'slategray', 'slategrey', 'snow',
+                  'springgreen', 'steelblue', 'tan', 'teal', 'thistle',
+                  'tomato', 'turquoise', 'violet', 'wheat', 'whitesmoke',
+                  'yellow', 'yellowgreen']
+
 
 def render_text(text: str,
                 output_base_path: Union[str, 'PathLike'],
-                paper_size: Tuple[int, int] = (210, 297),
-                margins: Tuple[int, int, int, int] = (25, 30, 25, 25),
+                paper_size: tuple[int, int] = (210, 297),
+                margins: tuple[int, int, int, int] = (25, 30, 25, 25),
                 font: str = 'Serif Normal 10',
                 language: Optional[str] = None,
                 base_dir: Optional[Literal['R', 'L']] = None,
                 enable_markup: bool = False,
+                random_markup: Optional[list[Literal['style_oblique',
+                                                     'style_italic',
+                                                     'weight_ultralight',
+                                                     'weight_bold',
+                                                     'weight_ultrabold',
+                                                     'weight_heavy',
+                                                     'variant_smallcaps',
+                                                     'underline_single',
+                                                     'underline_double',
+                                                     'underline_low',
+                                                     'underline_error',
+                                                     'overline_single',
+                                                     'shift_subscript',
+                                                     'shift_superscript',
+                                                     'strikethrough_true',
+                                                     'foreground_random']]] = None,
+                random_markup_probability: float = 0.0,
                 raise_unrenderable: bool = False):
     """
     Renders (horizontal) text into a sequence of PDF files and creates parallel
@@ -67,6 +131,12 @@ def render_text(text: str,
                   is set, the system default will be used.
         base_dir: Sets the base direction of the BiDi algorithm.
         enable_markup: Enables/disables Pango markup parsing
+        random_markup: Set of text attributes to randomly apply to input text
+                       segments.
+        random_markup_probability: Probability with which to apply random markup to
+                                 input text segments. Set to 0.0 to disable.
+                                 Will automatically be disabled if
+                                 `enable_markup`is set to true.
         raise_unrenderable: raises an exception if the supplied text contains
                             glyphs that are not contained in the selected
                             typeface.
@@ -119,6 +189,26 @@ def render_text(text: str,
     layout.set_font_description(font_desc)
 
     if enable_markup:
+        if random_markup_probability> 0.0:
+            logger.warning('Input markup parsing and random markup are both enabled. Disabling random markup.')
+        _, attr, text, _ = Pango.parse_markup(text, -1, u'\x00')
+        layout.set_text(text)
+        layout.set_attributes(attr)
+    elif random_markup_probability > 0.0:
+        import numpy as np
+        rng = np.random.default_rng()
+        random_markup = np.array(random_markup)
+        text = html.escape(text, quote=False)
+        def _sub_fn(m):
+            s = m.captures()[0]
+            ts = random_markup[rng.random(len(random_markup)) > (1 - random_markup_probability) ** (1./len(random_markup))].tolist()
+            ts = {_markup_mapping[t.split('_', 1)[0]]: t.split('_', 1)[1] for t in ts}
+            if (color := ts.get('foreground')) and color == 'random':
+                ts['foreground'] = rng.choice(_markup_colors)
+            if ts:
+                return '<span ' + ' '.join(f'{k}="{v}"' for k, v in ts.items()) + f'>{s}</span>'
+            return s
+        text = regex.sub(r'\m\w+\M', _sub_fn, text)
         _, attr, text, _ = Pango.parse_markup(text, -1, u'\x00')
         layout.set_text(text)
         layout.set_attributes(attr)
