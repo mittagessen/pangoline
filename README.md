@@ -98,6 +98,15 @@ especially for rasterization with overlays:
     ~> pangoline --workers 8 render *.txt
     ~> pangoline --workers 8 rasterize *.xml
 
+## Limitations
+
+In order to achieve proper typesetting quality, Pango requires placing the
+whole text into a single layout before splitting it into individual pages by
+translating each line of the layout onto a page surface. This approach limits to
+maximum print space of a single text to 739.8 meters, roughly 3000 pages
+depending on paper size and margins, before an overflow of the 32 bit integer
+baseline position y-offset will occur.
+
 ## Funding
 
 <table border="0">

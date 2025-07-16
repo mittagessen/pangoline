@@ -23,6 +23,7 @@ import uuid
 import cairo
 import regex
 import logging
+import numpy as np
 
 gi.require_version('Pango', '1.0')
 gi.require_version('PangoCairo', '1.0')
@@ -30,7 +31,7 @@ from gi.repository import Pango, PangoCairo
 
 from pathlib import Path
 from itertools import count
-from typing import Union, Literal, Optional, TYPE_CHECKING
+from typing import Union, Literal, Optional, TYPE_CHECKING, Sequence
 
 from jinja2 import Environment, PackageLoader
 
@@ -93,7 +94,7 @@ def render_text(text: str,
                 language: Optional[str] = None,
                 base_dir: Optional[Literal['R', 'L']] = None,
                 enable_markup: bool = False,
-                random_markup: Optional[list[Literal['style_oblique',
+                random_markup: Optional[Sequence[Literal['style_oblique',
                                                      'style_italic',
                                                      'weight_ultralight',
                                                      'weight_bold',
@@ -108,7 +109,10 @@ def render_text(text: str,
                                                      'shift_subscript',
                                                      'shift_superscript',
                                                      'strikethrough_true',
-                                                     'foreground_random']]] = None,
+                                                     'foreground_random']]] =
+                ('style_italic', 'weight_bold', 'underline_single',
+                 'underline_double', 'overline_single', 'shift_subscript',
+                 'shift_superscript', 'strikethrough_true'),
                 random_markup_probability: float = 0.0,
                 raise_unrenderable: bool = False):
     """
@@ -195,7 +199,6 @@ def render_text(text: str,
         layout.set_text(text)
         layout.set_attributes(attr)
     elif random_markup_probability > 0.0:
-        import numpy as np
         rng = np.random.default_rng()
         random_markup = np.array(random_markup)
         text = html.escape(text, quote=False)
@@ -244,6 +247,10 @@ def render_text(text: str,
         while not line_it.at_last_line():
             line = line_it.get_line_readonly()
             baseline = line_it.get_baseline()
+            # integer overflow in baseline position
+            if baseline < 0:
+                logger.warning('Integer overflow in baseline position. Aborting.')
+                return
             if baseline > print_space_offset + page_print_space:
                 break
             s_idx, e_idx = line.start_index, line.length
