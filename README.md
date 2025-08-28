@@ -45,7 +45,10 @@ base direction can be manually set, for example:
 
 Text can also be styled with [Pango
 Markup](https://docs.gtk.org/Pango/pango_markup.html). Parsing is disabled per
-default but can be enabled with a switch:
+default but can be enabled with a switch. You'll need to escape any characters
+that are part of XML such as &, <, >, quotes, and various control characters
+using [HTML
+entities](https://en.wikipedia.org/wiki/List_of_XML_and_HTML_character_entity_references).
 
     ~> pangoline render --markup doc.txt
 
@@ -70,6 +73,10 @@ of colors are known to Pango, the `foreground_random` alias exists that enables
 all possible colors:
 
     ~> pangoline render  --random-markup-probability 0.01 --random-markup foreground_random doc.txt
+
+When applying random styles to words, control characters in the source text
+should *not* be escaped as pangoline internally escapes any characters that
+require it.
 
 ### Rasterization
 

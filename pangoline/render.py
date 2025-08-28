@@ -132,7 +132,8 @@ def render_text(text: str,
         paper_size: `(width, height)` of the PDF output in mm.
         margins: `(top, bottom, left, right)` margins in mm.
         language: Set language to enable language-specific rendering. If none
-                  is set, the system default will be used.
+                  is set, the system default will be used. It also sets the
+                  language metadata field in the ALTO output.
         base_dir: Sets the base direction of the BiDi algorithm.
         enable_markup: Enables/disables Pango markup parsing
         random_markup: Set of text attributes to randomly apply to input text
@@ -201,18 +202,19 @@ def render_text(text: str,
     elif random_markup_probability > 0.0:
         rng = np.random.default_rng()
         random_markup = np.array(random_markup)
-        text = html.escape(text, quote=False)
-        def _sub_fn(m):
-            s = m.captures()[0]
-            ts = random_markup[rng.random(len(random_markup)) > (1 - random_markup_probability) ** (1./len(random_markup))].tolist()
-            ts = {_markup_mapping[t.split('_', 1)[0]]: t.split('_', 1)[1] for t in ts}
-            if (color := ts.get('foreground')) and color == 'random':
-                ts['foreground'] = rng.choice(_markup_colors)
-            if ts:
-                return '<span ' + ' '.join(f'{k}="{v}"' for k, v in ts.items()) + f'>{s}</span>'
-            return s
-        text = regex.sub(r'\m\w+\M', _sub_fn, text)
-        _, attr, text, _ = Pango.parse_markup(text, -1, u'\x00')
+        marked_text = ''
+        for s in regex.splititer(r'(\m\w+\M)', text):
+            s = html.escape(s, quote=False)
+            # only mark up words, not punctuation, whitespace ...
+            if regex.match(r'\w+', s):
+                ts = random_markup[rng.random(len(random_markup)) > (1 - random_markup_probability) ** (1./len(random_markup))].tolist()
+                ts = {_markup_mapping[t.split('_', 1)[0]]: t.split('_', 1)[1] for t in ts}
+                if (color := ts.get('foreground')) and color == 'random':
+                    ts['foreground'] = rng.choice(_markup_colors)
+                if ts:
+                    s = '<span ' + ' '.join(f'{k}="{v}"' for k, v in ts.items()) + f'>{s}</span>'
+            marked_text += s
+        _, attr, text, _ = Pango.parse_markup(marked_text, -1, u'\x00')
         layout.set_text(text)
         layout.set_attributes(attr)
     else:
