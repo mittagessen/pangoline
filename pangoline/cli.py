@@ -71,10 +71,29 @@ def cli(workers):
 
 def _render_doc(doc, output_dir, paper_size, margins, font, language,
                 base_dir, enable_markup, random_markup,
-                random_markup_probability, skip_unrenderable):
+                random_markup_probability, skip_unrenderable, template_path, parallel_texts_path,
+                line_spacing, baseline_position, padding_all, padding_horizontal, padding_vertical,
+                padding_left, padding_right, padding_top, padding_bottom, padding_baseline):
+    import json
     from pangoline.render import render_text
 
-    with open(doc, 'r') as fp:
+    # Load parallel texts mapping if provided
+    parallel_texts = None
+    if parallel_texts_path:
+        with open(parallel_texts_path, 'r', encoding='utf-8') as fp:
+            parallel_texts_data = json.load(fp)
+            # Convert string keys to integers and read text files
+            parallel_texts = {}
+            for frame_idx_str, text_file_path in parallel_texts_data.items():
+                frame_idx = int(frame_idx_str)
+                text_path = Path(text_file_path)
+                if not text_path.is_absolute():
+                    # Relative to the parallel_texts file's directory
+                    text_path = parallel_texts_path.parent / text_path
+                with open(text_path, 'r', encoding='utf-8') as tfp:
+                    parallel_texts[frame_idx] = tfp.read()
+
+    with open(doc, 'r', encoding='utf-8') as fp:
         render_text(text=fp.read(),
                     output_base_path=output_dir / doc.name,
                     paper_size=paper_size,
@@ -85,7 +104,19 @@ def _render_doc(doc, output_dir, paper_size, margins, font, language,
                     enable_markup=enable_markup,
                     random_markup=random_markup,
                     random_markup_probability=random_markup_probability,
-                    raise_unrenderable=not skip_unrenderable)
+                    raise_unrenderable=not skip_unrenderable,
+                    template_path=template_path,
+                    parallel_texts=parallel_texts,
+                    line_spacing=line_spacing,
+                    baseline_position=baseline_position,
+                    padding_all=padding_all,
+                    padding_horizontal=padding_horizontal,
+                    padding_vertical=padding_vertical,
+                    padding_left=padding_left,
+                    padding_right=padding_right,
+                    padding_top=padding_top,
+                    padding_bottom=padding_bottom,
+                    padding_baseline=padding_baseline)
 
 
 @cli.command('render')
@@ -139,6 +170,36 @@ def _render_doc(doc, output_dir, paper_size, margins, font, language,
 @click.option('--skip-unrenderable/--ignore-unrenderable',
               default=True,
               help='Skips rendering if the text contains unrenderable glyphs.')
+@click.option('--template',
+              type=click.Path(exists=True, dir_okay=False, readable=True, path_type=Path),
+              default=None,
+              help='Path to a JSON template file defining page frames for multi-column or complex layouts.')
+@click.option('--parallel-texts',
+              type=click.Path(exists=True, dir_okay=False, readable=True, path_type=Path),
+              default=None,
+              help='Path to a JSON file mapping frame indices to text file paths for parallel bilingual columns. '
+                   'Format: {"0": "path/to/english.txt", "1": "path/to/hebrew.txt"}. '
+                   'Frame indices start at 0. If frames in template have "text" field, that takes precedence.')
+@click.option('--line-spacing', default=None, type=click.FLOAT,
+              help='Additional space between lines in points. None for default.')
+@click.option('--baseline-position', default=None, type=click.FLOAT,
+              help='Adjust baseline position vertically in mm. Positive values move baseline up, negative values move it down.')
+@click.option('--padding-all', default=None, type=click.FLOAT,
+              help='Padding in mm applied to all sides of bounding boxes and baselines.')
+@click.option('--padding-horizontal', default=None, type=click.FLOAT,
+              help='Padding in mm applied to left and right sides of bounding boxes and baselines.')
+@click.option('--padding-vertical', default=None, type=click.FLOAT,
+              help='Padding in mm applied to top and bottom sides of bounding boxes.')
+@click.option('--padding-left', default=None, type=click.FLOAT,
+              help='Padding in mm applied to left side of bounding boxes and baselines.')
+@click.option('--padding-right', default=None, type=click.FLOAT,
+              help='Padding in mm applied to right side of bounding boxes and baselines.')
+@click.option('--padding-top', default=None, type=click.FLOAT,
+              help='Padding in mm applied to top side of bounding boxes.')
+@click.option('--padding-bottom', default=None, type=click.FLOAT,
+              help='Padding in mm applied to bottom side of bounding boxes.')
+@click.option('--padding-baseline', default=None, type=click.FLOAT,
+              help='Padding in mm applied to left and right endpoints of baselines only.')
 @click.argument('docs',
                 type=click.Path(exists=True, dir_okay=False, readable=True, path_type=Path),
                 nargs=-1)
@@ -153,6 +214,18 @@ def render(ctx,
            random_markup: list[str],
            random_markup_probability: float,
            skip_unrenderable: bool,
+           template: Optional['PathLike'],
+           parallel_texts: Optional['PathLike'],
+           line_spacing: Optional[float],
+           baseline_position: Optional[float],
+           padding_all: Optional[float],
+           padding_horizontal: Optional[float],
+           padding_vertical: Optional[float],
+           padding_left: Optional[float],
+           padding_right: Optional[float],
+           padding_top: Optional[float],
+           padding_bottom: Optional[float],
+           padding_baseline: Optional[float],
            docs):
     """
     Renders text files into PDF documents and creates parallel ALTO facsimiles.
@@ -171,7 +244,19 @@ def render(ctx,
                                              enable_markup=markup,
                                              random_markup=random_markup,
                                              random_markup_probability=random_markup_probability,
-                                             skip_unrenderable=skip_unrenderable), docs):
+                                             skip_unrenderable=skip_unrenderable,
+                                             template_path=template,
+                                             parallel_texts_path=parallel_texts,
+                                             line_spacing=line_spacing,
+                                             baseline_position=baseline_position,
+                                             padding_all=padding_all,
+                                             padding_horizontal=padding_horizontal,
+                                             padding_vertical=padding_vertical,
+                                             padding_left=padding_left,
+                                             padding_right=padding_right,
+                                             padding_top=padding_top,
+                                             padding_bottom=padding_bottom,
+                                             padding_baseline=padding_baseline), docs):
             progress.update(render_task, total=len(docs), advance=1)
 
 

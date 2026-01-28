@@ -1,0 +1,22 @@
+{
+  "frames": [
+    {
+      "x": 20,
+      "y": 25,
+      "width": 75,
+      "height": 242,
+      "alignment": "justify",
+      "language": "he",
+      "base_dir": "R"
+    },
+    {
+      "x": 115,
+      "y": 25,
+      "width": 75,
+      "height": 242,
+      "alignment": "justify",
+      "language": "syr",
+      "base_dir": "R"
+    }
+  ]
+}
