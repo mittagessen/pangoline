@@ -261,18 +261,22 @@ def render_text(text: str,
                 # line direction determines reference point of extents
                 line_dir = line.get_resolved_direction()
                 ink_extents, log_extents = line.get_extents()
-                Pango.extents_to_pixels(ink_extents)
+                # Convert extents from Pango units to points (avoid extents_to_pixels to prevent segfault)
+                ink_x_pt = Pango.units_to_double(ink_extents.x)
+                ink_y_pt = Pango.units_to_double(ink_extents.y)
+                ink_width_pt = Pango.units_to_double(ink_extents.width)
+                ink_height_pt = Pango.units_to_double(ink_extents.height)
                 bl = Pango.units_to_double(baseline - print_space_offset) + top_margin
-                top = bl + ink_extents.y
-                bottom = top + ink_extents.height
+                top = bl + ink_y_pt
+                bottom = top + ink_height_pt
                 if line_dir == Pango.Direction.RTL:
-                    right = (width - right_margin) - ink_extents.x
-                    left = right - ink_extents.width
+                    right = (width - right_margin) - ink_x_pt
+                    left = right - ink_width_pt
                     lleft = (width - right_margin) - Pango.units_to_double(log_extents.x + log_extents.width)
                 elif line_dir == Pango.Direction.LTR:
-                    left = ink_extents.x + left_margin
+                    left = ink_x_pt + left_margin
                     lleft = Pango.units_to_double(log_extents.x) + left_margin
-                    right = left + ink_extents.width
+                    right = left + ink_width_pt
                 line_splits.append({'id': f'_{uuid.uuid4()}',
                                     'text': line_text,
                                     'baseline': int(round(bl / _mm_point)),
