@@ -6,9 +6,9 @@ box information.
 
 It is intended to support the rendering of most of the world's writing systems
 in order to create synthetic page-level training data for automatic text
-recognition systems. Functionality is fairly basic for now. PDF output is
-single column, justified text without word breaking. Paragraphs are split
-automatically once a page is full.
+recognition systems. PDF output supports single-column, multi-column, and
+complex page layouts through configurable templates. Text flows automatically
+between frames, and paragraphs are split automatically once a page is full.
 
 ## Installation
 
@@ -42,6 +42,13 @@ Various options to direct rendering such as page size, margins, language, and
 base direction can be manually set, for example:
 
     ~> pangoline render -p 216 279 -l en-us -f "Noto Sans 24" doc.txt
+
+Additional typography controls are available for fine-tuning line spacing,
+baseline position, and bounding box padding:
+
+    ~> pangoline render --line-spacing 2.0 --baseline-position 1.0 --padding-all 1.0 doc.txt
+
+See `ENHANCEMENTS.md` for detailed documentation on these options.
 
 Text can also be styled with [Pango
 Markup](https://docs.gtk.org/Pango/pango_markup.html). Parsing is disabled per
@@ -77,6 +84,65 @@ all possible colors:
 When applying random styles to words, control characters in the source text
 should *not* be escaped as pangoline internally escapes any characters that
 require it.
+
+### Multi-Frame Layouts
+
+PangoLine supports complex page layouts through JSON template files. Templates
+define one or more frames (rectangular regions) on each page where text can flow.
+This enables multi-column layouts, centered headers, sidebars, and other
+complex arrangements while maintaining accurate bounding boxes and baselines.
+
+#### Using Templates
+
+To use a template, specify the `--template` option:
+
+    ~> pangoline render --template templates/two_columns.json doc.txt
+
+#### Template Format
+
+Templates are JSON files with the following structure:
+
+```json
+{
+  "frames": [
+    {
+      "x": 20,
+      "y": 20,
+      "width": 80,
+      "height": 257,
+      "alignment": "justify"
+    },
+    {
+      "x": 110,
+      "y": 20,
+      "width": 80,
+      "height": 257,
+      "alignment": "justify"
+    }
+  ]
+}
+```
+
+Each frame defines:
+- `x`, `y`: Position of the frame's top-left corner in millimeters
+- `width`, `height`: Frame dimensions in millimeters
+- `alignment`: Text alignment within the frame. One of: `"left"`, `"center"`, `"right"`, `"justify"`
+
+Text flows sequentially through frames: the first frame fills completely before
+text moves to the second frame, and so on. When all frames on a page are full,
+a new page is created with the same frame layout.
+
+#### Example Templates
+
+PangoLine includes several example templates in the `pangoline/templates/`
+directory:
+
+- `two_columns.json`: Classic two-column layout
+- `three_columns.json`: Three-column layout
+- `header_two_columns.json`: Centered header block with two columns below
+
+You can create custom templates for any layout you need, including sidebars,
+poetry layouts, or complex multi-region designs.
 
 ### Rasterization
 

@@ -104,6 +104,17 @@ def rasterize_document(doc: Union[str, 'PathLike'],
     printspace.set('WIDTH', str(im.width))
     printspace.set('HEIGHT', str(im.height))
 
+    # Scale TextBlock coordinates
+    for block in tree.findall('.//{*}TextBlock'):
+        block_hpos = int(float(block.get('HPOS')) * coord_scale)
+        block_vpos = int(float(block.get('VPOS')) * coord_scale)
+        block_width = int(float(block.get('WIDTH')) * coord_scale)
+        block_height = int(float(block.get('HEIGHT')) * coord_scale)
+        block.set('HPOS', str(block_hpos))
+        block.set('VPOS', str(block_vpos))
+        block.set('WIDTH', str(block_width))
+        block.set('HEIGHT', str(block_height))
+
     for line in tree.findall('.//{*}TextLine'):
         hpos = int(float(line.get('HPOS')) * coord_scale)
         vpos = int(float(line.get('VPOS')) * coord_scale)

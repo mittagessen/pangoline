@@ -1,0 +1,37 @@
+{
+  "frames": [
+    {
+      "x": 20,
+      "y": 25,
+      "width": 40,
+      "height": 242,
+      "alignment": "justify",
+      "language": "he",
+      "base_dir": "R",
+      "font": "Noto Rashi Hebrew Normal 8",
+      "text": null
+    },
+    {
+      "x": 70,
+      "y": 25,
+      "width": 70,
+      "height": 242,
+      "alignment": "justify",
+      "language": "he",
+      "base_dir": "R",
+      "font": "Serif Normal 13",
+      "text": null
+    },
+    {
+      "x": 150,
+      "y": 25,
+      "width": 40,
+      "height": 242,
+      "alignment": "justify",
+      "language": "he",
+      "base_dir": "R",
+      "font": "Serif Normal 12",
+      "text": null
+    }
+  ]
+}

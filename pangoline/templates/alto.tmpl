@@ -11,16 +11,33 @@
     <Layout>
         <Page WIDTH="{{ page_width }}" HEIGHT="{{ page_height }}" PHYSICAL_IMG_NR="0" ID="page_0" LANG="{{ language }}">
             <PrintSpace HPOS="0" VPOS="0" WIDTH="{{ page_width }}" HEIGHT="{{ page_height }}">
+              {% if text_blocks is defined -%}
+              {# Multi-frame layout: multiple TextBlocks #}
+              {% for block in text_blocks -%}
+              <TextBlock ID="{{ block.id }}" HPOS="{{ block.x }}" VPOS="{{ block.y }}" WIDTH="{{ block.width }}" HEIGHT="{{ block.height }}"{% if block.base_dir %} BASE_DIRECTION="{{ block.base_dir }}"{% elif base_dir %} BASE_DIRECTION="{{ base_dir }}"{% endif %}>
+                {% for line in block.lines -%}
+                <TextLine ID="{{ line.id }}" HPOS="{{ line.left }}" VPOS="{{ line.top }}" WIDTH="{{ line.right - line.left }}" HEIGHT="{{ line.bottom - line.top }}" BASELINE="{{ line.left }},{{ line.baseline }} {{ line.right }},{{ line.baseline }}">
+                  <Shape>
+                    <Polygon POINTS="{{ line.left }},{{ line.top }} {{ line.right }},{{ line.top }} {{ line.right }},{{ line.bottom }} {{ line.left }},{{ line.bottom }}"/>
+                  </Shape>
+                  <String CONTENT="{{ line.text|e }}"/>
+                </TextLine>
+                {% endfor -%}
+              </TextBlock>
+              {% endfor -%}
+              {% else -%}
+              {# Backward compatibility: single TextBlock #}
               <TextBlock ID="{{ text_block_id }}"{% if base_dir %} BASE_DIRECTION="{{ base_dir }}"{% endif %}>
                 {% for line in lines -%}
                 <TextLine ID="{{ line.id }}" HPOS="{{ line.left }}" VPOS="{{ line.top }}" WIDTH="{{ line.right - line.left }}" HEIGHT="{{ line.bottom - line.top }}" BASELINE="{{ line.left }},{{ line.baseline }} {{ line.right }},{{ line.baseline }}">
                   <Shape>
                     <Polygon POINTS="{{ line.left }},{{ line.top }} {{ line.right }},{{ line.top }} {{ line.right }},{{ line.bottom }} {{ line.left }},{{ line.bottom }}"/>
                   </Shape>
-	            <String CONTENT="{{ line.text|e }}"/>
+                  <String CONTENT="{{ line.text|e }}"/>
                 </TextLine>
-              {% endfor -%}
+                {% endfor -%}
               </TextBlock>
+              {% endif -%}
             </PrintSpace>
         </Page>
     </Layout>
